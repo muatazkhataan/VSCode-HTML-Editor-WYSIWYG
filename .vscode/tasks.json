@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "build",
+      "problemMatcher": [],
+      "label": "npm: build",
+      "detail": "esbuild src/extension.ts --bundle --platform=node --outfile=dist/extension.js --external:vscode --format=cjs",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "type": "npm",
+      "script": "watch",
+      "problemMatcher": [],
+      "label": "npm: watch",
+      "detail": "npm run build -- --watch",
+      "isBackground": true
+    }
+  ]
+}
+

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <title>إنشاء أيقونة</title>
+</head>
+
+<body>
+    <canvas id="canvas" width="256" height="256"></canvas>
+    <br>
+    <button onclick="downloadIcon()">تحميل الأيقونة</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // خلفية متدرجة
+        const gradient = ctx.createLinearGradient(0, 0, 256, 256);
+        gradient.addColorStop(0, '#007acc');
+        gradient.addColorStop(1, '#0066b8');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 256, 256);
+
+        // رمز HTML
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 80px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('</>', 128, 100);
+
+        // رمز القلم (للتحرير)
+        ctx.font = 'bold 60px sans-serif';
+        ctx.fillText('✏️', 128, 180);
+
+        function downloadIcon() {
+            canvas.toBlob(function (blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'icon.png';
+                a.click();
+            });
+        }
+    </script>
+</body>
+
+</html>
