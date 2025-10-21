@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار محرر HTML مع CSS خارجي</title>
+    
+    <!-- ملف CSS خارجي -->
+    <link rel="stylesheet" href="test-styles.css">
+    
+    <!-- أنماط داخلية إضافية -->
+    <style>
+        body {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+        }
+        
+        .special-text {
+            color: #9b59b6;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎨 محرر HTML مع دعم CSS الخارجي</h1>
+    
+    <h2>مرحباً بك في النسخة المطورة!</h2>
+    
+    <p>هذا المحرر الآن يدعم <span class="special-text">ملفات CSS الخارجية</span>! يمكنك ربط ملفات الأنماط باستخدام <code>&lt;link&gt;</code> وسيتم تطبيقها تلقائياً في المعاينة.</p>
+    
+    <h2>الميزات الجديدة:</h2>
+    
+    <ul>
+        <li>✅ قراءة وتطبيق ملفات CSS الخارجية المحلية</li>
+        <li>✅ دعم ملفات CSS الخارجية عبر الإنترنت (http/https)</li>
+        <li>✅ دمج الأنماط الداخلية (<code>&lt;style&gt;</code>) والخارجية</li>
+        <li>✅ تحويل تلقائي للأنماط من <code>body</code> إلى <code>#editor</code></li>
+        <li>✅ معالجة الأخطاء عند عدم وجود الملفات</li>
+    </ul>
+    
+    <h2>كيفية الاستخدام:</h2>
+    
+    <p>ببساطة أضف ملف CSS في نفس المجلد أو مجلد فرعي، ثم أضف العلامة التالية في <code>&lt;head&gt;</code>:</p>
+    
+    <blockquote>
+        &lt;link rel="stylesheet" href="test-styles.css"&gt;
+    </blockquote>
+    
+    <p><strong>ملاحظة مهمة:</strong> الأنماط المطبقة على <code>body</code> في ملف CSS الخارجي سيتم تحويلها تلقائياً لتطبيقها على منطقة المحرر.</p>
+    
+    <div class="highlight">
+        💡 نصيحة: يمكنك أيضاً استخدام مكتبات CSS شهيرة مثل Bootstrap أو Tailwind من خلال الروابط الخارجية!
+    </div>
+</body>
+
+</html>
+

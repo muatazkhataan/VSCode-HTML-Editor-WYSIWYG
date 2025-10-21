@@ -30,7 +30,14 @@ export function activate(context: vscode.ExtensionContext) {
         
         if (currentPanel) {
             currentPanel.reveal(vscode.ViewColumn.Beside);
-            sendInitMessage(currentPanel.webview, document);
+            // تحديث الـ HTML للمحرر مع CSS الجديد
+            currentPanel.webview.html = getWebviewContent(currentPanel.webview, context, currentDocument);
+            // إرسال المحتوى الجديد
+            setTimeout(() => {
+                if (currentPanel && currentDocument) {
+                    sendInitMessage(currentPanel.webview, currentDocument);
+                }
+            }, 500);
         } else {
             currentPanel = createWebviewPanel(context, document);
         }
@@ -64,9 +71,48 @@ export function activate(context: vscode.ExtensionContext) {
             }, 100);
         })
     );
+
+    // الاستماع لتغيير الملف النشط
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor((editor) => {
+            // التحقق من وجود محرر مفتوح ومحرر مرئي نشط
+            if (!currentPanel || !editor) {
+                return;
+            }
+
+            const document = editor.document;
+            
+            // التحقق من أن الملف الجديد هو HTML
+            if (document.languageId !== 'html') {
+                return;
+            }
+
+            // تحديث المستند الحالي
+            currentDocument = document;
+            
+            console.log('📄 تم التبديل إلى ملف HTML جديد:', document.fileName);
+            
+            // تحديث محتوى الـ Webview بالكامل مع CSS الجديد
+            currentPanel.webview.html = getWebviewContent(currentPanel.webview, context, document);
+            
+            // إرسال المحتوى الجديد
+            setTimeout(() => {
+                if (currentPanel && currentDocument) {
+                    sendInitMessage(currentPanel.webview, currentDocument);
+                }
+            }, 500);
+        })
+    );
 }
 
 function createWebviewPanel(context: vscode.ExtensionContext, document: vscode.TextDocument): vscode.WebviewPanel {
+    // الحصول على workspace roots للسماح بالوصول لجميع الملفات في المشروع
+    const workspaceFolders = vscode.workspace.workspaceFolders || [];
+    const localResourceRoots = [
+        vscode.Uri.file(path.join(context.extensionPath, 'media')),
+        ...workspaceFolders.map(folder => folder.uri)
+    ];
+    
     const panel = vscode.window.createWebviewPanel(
         'htmlWysiwyg',
         'HTML Visual Editor',
@@ -74,10 +120,7 @@ function createWebviewPanel(context: vscode.ExtensionContext, document: vscode.T
         {
             enableScripts: true,
             retainContextWhenHidden: true,
-            localResourceRoots: [
-                vscode.Uri.file(path.join(context.extensionPath, 'media')),
-                vscode.Uri.file(path.dirname(document.uri.fsPath))
-            ]
+            localResourceRoots: localResourceRoots
         }
     );
 
@@ -92,25 +135,45 @@ function createWebviewPanel(context: vscode.ExtensionContext, document: vscode.T
     panel.webview.onDidReceiveMessage(
         async (message) => {
             console.log('Extension received message:', message.type);
+            
+            // الحصول على الملف النشط الحالي (أكثر موثوقية من currentDocument)
+            const activeEditor = vscode.window.activeTextEditor;
+            let targetDocument: vscode.TextDocument | undefined;
+            
+            // إذا كان هناك محرر نشط وهو HTML، استخدمه
+            if (activeEditor && activeEditor.document.languageId === 'html') {
+                targetDocument = activeEditor.document;
+                // تحديث currentDocument للتزامن
+                currentDocument = targetDocument;
+                console.log('🎯 Using active editor:', targetDocument.fileName);
+            } else if (currentDocument) {
+                // استخدم currentDocument كخيار احتياطي
+                targetDocument = currentDocument;
+                console.log('📋 Using current document:', targetDocument.fileName);
+            } else {
+                console.error('❌ No document available');
+                return;
+            }
+            
             switch (message.type) {
                 case 'requestInit':
                     console.log('Sending init message...');
-                    sendInitMessage(panel.webview, document);
+                    sendInitMessage(panel.webview, targetDocument);
                     break;
 
                 case 'updateHtml':
-                    console.log('Updating document...');
-                    await updateDocument(document, message.html);
+                    console.log('✍️ Updating document:', targetDocument.fileName);
+                    await updateDocument(targetDocument, message.html);
                     break;
 
                 case 'saveAsset':
                     console.log('Saving asset...');
-                    await saveAsset(panel.webview, document, message.filename, message.dataUrl);
+                    await saveAsset(panel.webview, targetDocument, message.filename, message.dataUrl);
                     break;
 
                 case 'cursorPosition':
                     console.log('Syncing cursor position:', message.offset);
-                    syncCursorToDocument(document, message.offset);
+                    syncCursorToDocument(targetDocument, message.offset);
                     break;
             }
         },
@@ -137,8 +200,51 @@ function getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionCon
 
     // استخراج محتوى <style> من المستند الأصلي وتحويله للمحرر
     const htmlContent = document.getText();
+    const documentDir = path.dirname(document.uri.fsPath);
+    
+    // استخراج وتحميل ملفات CSS الخارجية
+    let externalStyles = '';
+    const linkMatches = htmlContent.matchAll(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi);
+    
+    for (const linkMatch of linkMatches) {
+        const linkTag = linkMatch[0];
+        const hrefMatch = linkTag.match(/href=["']([^"']+)["']/i);
+        
+        if (hrefMatch) {
+            const href = hrefMatch[1];
+            
+            // تجاهل الروابط الخارجية (http/https)
+            if (!href.startsWith('http://') && !href.startsWith('https://')) {
+                try {
+                    const cssPath = path.join(documentDir, href);
+                    if (fs.existsSync(cssPath)) {
+                        const cssContent = fs.readFileSync(cssPath, 'utf-8');
+                        
+                        // تحويل CSS من body إلى #editor
+                        const convertedCss = cssContent
+                            .replace(/\bbody\s*\{/g, '#editor {')
+                            .replace(/\bbody\s+/g, '#editor ')
+                            .replace(/\bbody\s*>/g, '#editor >');
+                        
+                        externalStyles += '<style>' + convertedCss + '</style>\n';
+                        console.log(`✅ تم تحميل ملف CSS: ${href}`);
+                    } else {
+                        console.warn(`⚠️ ملف CSS غير موجود: ${cssPath}`);
+                    }
+                } catch (error) {
+                    console.error(`❌ خطأ في تحميل ملف CSS ${href}:`, error);
+                }
+            } else {
+                // للروابط الخارجية، احتفظ بها كما هي
+                externalStyles += `<link rel="stylesheet" href="${href}">\n`;
+                console.log(`🌐 تم إضافة رابط CSS خارجي: ${href}`);
+            }
+        }
+    }
+    
+    // استخراج محتوى <style> الداخلي
     const styleMatch = htmlContent.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
-    let styles = '';
+    let inlineStyles = '';
     
     if (styleMatch) {
         // استخراج محتوى CSS فقط
@@ -153,8 +259,11 @@ function getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionCon
             .replace(/\bbody\s+/g, '#editor ')
             .replace(/\bbody\s*>/g, '#editor >');
         
-        styles = '<style>' + convertedCss + '</style>';
+        inlineStyles = '<style>' + convertedCss + '</style>';
     }
+    
+    // دمج جميع الأنماط
+    const allStyles = externalStyles + inlineStyles;
 
     return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -163,14 +272,16 @@ function getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionCon
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'none';
-        img-src ${cspSource} data: blob:;
-        script-src ${cspSource} 'nonce-${nonce}';
-        style-src ${cspSource} 'unsafe-inline';
-        font-src ${cspSource};
+        img-src ${cspSource} data: blob: https:;
+        script-src ${cspSource} 'nonce-${nonce}' https:;
+        style-src ${cspSource} 'unsafe-inline' https:;
+        font-src ${cspSource} https: data:;
+        connect-src https:;
     ">
     <title>HTML Visual Editor</title>
     <link rel="stylesheet" href="${mediaUri}/styles.css">
-    ${styles}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    ${allStyles}
 </head>
 <body>
     <div id="toolbar" class="toolbar"></div>

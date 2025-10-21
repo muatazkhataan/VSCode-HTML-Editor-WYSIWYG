@@ -45,6 +45,10 @@ function initializeEditor() {
     // إضافة دعم اختصارات لوحة المفاتيح المخصصة
     editor.addEventListener('keydown', handleKeyboardShortcuts);
     
+    // إضافة معالج عام على مستوى document لضمان التقاط الاختصارات
+    document.addEventListener('keydown', handleKeyboardShortcuts, true);
+    window.addEventListener('keydown', handleKeyboardShortcuts, true);
+    
     // إضافة أزرار شريط الأدوات
     setupToolbar();
 }
@@ -85,23 +89,31 @@ function setupToolbar() {
     toolbar.appendChild(sep1);
     
     const buttons = [
-        { icon: '✂️', command: 'cut', title: 'قص (Ctrl+X)' },
-        { icon: '📑', command: 'copy', title: 'نسخ (Ctrl+C)' },
-        { icon: '📋', command: 'paste', title: 'لصق (Ctrl+V)' },
+        { icon: '<i class="fas fa-cut"></i>', command: 'cut', title: 'قص' },
+        { icon: '<i class="fas fa-copy"></i>', command: 'copy', title: 'نسخ' },
+        { icon: '<i class="fas fa-paste"></i>', command: 'paste', title: 'لصق' },
         { type: 'separator' },
-        { icon: '𝐁', command: 'bold', title: 'عريض (Ctrl+B)' },
-        { icon: '𝐼', command: 'italic', title: 'مائل (Ctrl+I)' },
-        { icon: '𝐔', command: 'underline', title: 'تسطير (Ctrl+U)' },
-        { icon: '—', command: 'strikeThrough', title: 'يتوسطه خط' },
+        { icon: '<i class="fas fa-bold"></i>', command: 'bold', title: 'عريض' },
+        { icon: '<i class="fas fa-italic"></i>', command: 'italic', title: 'مائل' },
+        { icon: '<i class="fas fa-underline"></i>', command: 'underline', title: 'تسطير' },
+        { icon: '<i class="fas fa-strikethrough"></i>', command: 'strikeThrough', title: 'يتوسطه خط' },
         { type: 'separator' },
-        { icon: '•', command: 'insertUnorderedList', title: 'قائمة نقطية' },
-        { icon: '1.', command: 'insertOrderedList', title: 'قائمة مرقمة' },
+        { icon: '<i class="fas fa-align-justify"></i>', command: 'justifyFull', title: 'محاذاة مبررة' },
+        { icon: '<i class="fas fa-align-right"></i>', command: 'justifyRight', title: 'محاذاة لليمين' },
+        { icon: '<i class="fas fa-align-center"></i>', command: 'justifyCenter', title: 'محاذاة للوسط' },
+        { icon: '<i class="fas fa-align-left"></i>', command: 'justifyLeft', title: 'محاذاة لليسار' },
         { type: 'separator' },
-        { icon: '🔗', command: 'createLink', title: 'إضافة رابط' },
-        { icon: '🖼', command: 'insertImage', title: 'إضافة صورة' },
+        { icon: '<i class="fa-solid fa-paragraph fa-flip-horizontal"></i>', command: 'dirRTL', title: 'اتجاه RTL' },
+        { icon: '<i class="fa-solid fa-paragraph"></i>', command: 'dirLTR', title: 'اتجاه LTR' },
         { type: 'separator' },
-        { icon: '➡️', command: 'undo', title: 'تراجع (Ctrl+Z)' },
-        { icon: '⬅️', command: 'redo', title: 'إعادة (Ctrl+Y)' },
+        { icon: '<i class="fas fa-list-ul"></i>', command: 'insertUnorderedList', title: 'قائمة نقطية' },
+        { icon: '<i class="fas fa-list-ol"></i>', command: 'insertOrderedList', title: 'قائمة مرقمة' },
+        { type: 'separator' },
+        { icon: '<i class="fas fa-link"></i>', command: 'createLink', title: 'إضافة رابط' },
+        { icon: '<i class="fas fa-image"></i>', command: 'insertImage', title: 'إضافة صورة' },
+        { type: 'separator' },
+        { icon: '<i class="fas fa-undo"></i>', command: 'undo', title: 'تراجع' },
+        { icon: '<i class="fas fa-redo"></i>', command: 'redo', title: 'إعادة' },
     ];
     
     buttons.forEach(btn => {
@@ -112,13 +124,57 @@ function setupToolbar() {
         } else {
             const button = document.createElement('button');
             button.className = 'toolbar-btn';
-            button.textContent = btn.icon;
+            button.innerHTML = btn.icon;
             button.title = btn.title;
             button.dataset.command = btn.command;
             button.onclick = () => handleToolbarCommand(btn.command);
             toolbar.appendChild(button);
         }
     });
+}
+
+// التحقق من محاذاة النص الحالية
+function checkTextAlign(align) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return false;
+    
+    const range = selection.getRangeAt(0);
+    let element = range.commonAncestorContainer;
+    
+    // البحث عن أقرب عنصر block
+    while (element && element !== editor) {
+        if (element.nodeType === Node.ELEMENT_NODE) {
+            const tagName = element.nodeName.toLowerCase();
+            if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'].includes(tagName)) {
+                return element.style.textAlign === align;
+            }
+        }
+        element = element.parentNode;
+    }
+    
+    return false;
+}
+
+// التحقق من اتجاه النص الحالي
+function checkDirection(dir) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return false;
+    
+    const range = selection.getRangeAt(0);
+    let element = range.commonAncestorContainer;
+    
+    // البحث عن أقرب عنصر block أو span
+    while (element && element !== editor) {
+        if (element.nodeType === Node.ELEMENT_NODE) {
+            const tagName = element.nodeName.toLowerCase();
+            if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote', 'span'].includes(tagName)) {
+                return element.style.direction === dir;
+            }
+        }
+        element = element.parentNode;
+    }
+    
+    return false;
 }
 
 // تحديث حالة الأزرار بناءً على الموضع الحالي
@@ -152,6 +208,24 @@ function updateToolbarState() {
                     break;
                 case 'insertOrderedList':
                     isActive = document.queryCommandState('insertOrderedList');
+                    break;
+                case 'justifyLeft':
+                    isActive = checkTextAlign('left');
+                    break;
+                case 'justifyCenter':
+                    isActive = checkTextAlign('center');
+                    break;
+                case 'justifyRight':
+                    isActive = checkTextAlign('right');
+                    break;
+                case 'justifyFull':
+                    isActive = checkTextAlign('justify');
+                    break;
+                case 'dirRTL':
+                    isActive = checkDirection('rtl');
+                    break;
+                case 'dirLTR':
+                    isActive = checkDirection('ltr');
                     break;
             }
         } catch (e) {
@@ -189,6 +263,103 @@ function updateToolbarState() {
     }
 }
 
+// تطبيق محاذاة النص على العنصر الحالي
+function applyTextAlign(align) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    let element = range.commonAncestorContainer;
+    
+    // البحث عن أقرب عنصر block
+    while (element && element !== editor) {
+        if (element.nodeType === Node.ELEMENT_NODE) {
+            const tagName = element.nodeName.toLowerCase();
+            if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'].includes(tagName)) {
+                // التحقق من المحاذاة الحالية
+                const currentAlign = element.style.textAlign;
+                if (currentAlign === align) {
+                    // إزالة المحاذاة إذا كانت نفسها
+                    element.style.textAlign = '';
+                    if (!element.getAttribute('style')) {
+                        element.removeAttribute('style');
+                    }
+                } else {
+                    // تطبيق المحاذاة الجديدة
+                    element.style.textAlign = align;
+                }
+                // حفظ التغييرات
+                handleEditorChange();
+                return;
+            }
+        }
+        element = element.parentNode;
+    }
+    
+    // إذا لم نجد عنصر block، نستخدم execCommand
+    const commands = {
+        'left': 'justifyLeft',
+        'center': 'justifyCenter',
+        'right': 'justifyRight',
+        'justify': 'justifyFull'
+    };
+    document.execCommand(commands[align], false, null);
+    handleEditorChange();
+}
+
+// تطبيق اتجاه النص على العنصر الحالي
+function applyDirection(dir) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    let element = range.commonAncestorContainer;
+    
+    // البحث عن أقرب عنصر block
+    while (element && element !== editor) {
+        if (element.nodeType === Node.ELEMENT_NODE) {
+            const tagName = element.nodeName.toLowerCase();
+            if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'].includes(tagName)) {
+                // التحقق من الاتجاه الحالي
+                const currentDir = element.style.direction;
+                if (currentDir === dir) {
+                    // إزالة الاتجاه إذا كان نفسه
+                    element.style.direction = '';
+                    if (!element.getAttribute('style')) {
+                        element.removeAttribute('style');
+                    }
+                } else {
+                    // تطبيق الاتجاه الجديد
+                    element.style.direction = dir;
+                }
+                // حفظ التغييرات
+                handleEditorChange();
+                return;
+            }
+        }
+        element = element.parentNode;
+    }
+    
+    // إذا لم نجد عنصر block، نلف النص المحدد في span
+    if (selection.toString().length > 0) {
+        document.execCommand('styleWithCSS', false, true);
+        const span = document.createElement('span');
+        span.style.direction = dir;
+        span.textContent = selection.toString();
+        range.deleteContents();
+        range.insertNode(span);
+        
+        // تحديد الـ span الجديد
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+        
+        // حفظ التغييرات
+        handleEditorChange();
+    }
+}
+
 async function handleToolbarCommand(command) {
     switch (command) {
         case 'cut':
@@ -214,6 +385,30 @@ async function handleToolbarCommand(command) {
             };
             input.click();
             break;
+        case 'justifyLeft':
+            applyTextAlign('left');
+            console.log('📝 Left align applied');
+            break;
+        case 'justifyCenter':
+            applyTextAlign('center');
+            console.log('📝 Center align applied');
+            break;
+        case 'justifyRight':
+            applyTextAlign('right');
+            console.log('📝 Right align applied');
+            break;
+        case 'justifyFull':
+            applyTextAlign('justify');
+            console.log('📝 Justify align applied');
+            break;
+        case 'dirRTL':
+            applyDirection('rtl');
+            console.log('📝 RTL direction applied');
+            break;
+        case 'dirLTR':
+            applyDirection('ltr');
+            console.log('📝 LTR direction applied');
+            break;
         default:
             document.execCommand(command, false, null);
     }
@@ -231,31 +426,82 @@ async function handleKeyboardShortcuts(e) {
     
     if (!modifier) return;
     
+    let handled = false;
+    
     switch (e.keyCode) {
+        case 66: // B - عريض (Ctrl+B أو Cmd+B)
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            document.execCommand('bold');
+            console.log('🔨 Bold applied');
+            setTimeout(updateToolbarState, 50);
+            handled = true;
+            break;
+            
+        case 73: // I - مائل (Ctrl+I أو Cmd+I)
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            document.execCommand('italic');
+            console.log('🔨 Italic applied');
+            setTimeout(updateToolbarState, 50);
+            handled = true;
+            break;
+            
+        case 85: // U - تسطير (Ctrl+U أو Cmd+U)
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            document.execCommand('underline');
+            console.log('🔨 Underline applied');
+            setTimeout(updateToolbarState, 50);
+            handled = true;
+            break;
+            
         case 88: // X - قص (Ctrl+X أو Cmd+X)
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             await cutSelection();
+            handled = true;
             break;
             
         case 67: // C - نسخ (Ctrl+C أو Cmd+C)
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             await copySelection();
+            handled = true;
             break;
             
         case 86: // V - لصق (Ctrl+V أو Cmd+V)
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             await pasteFromClipboard();
+            handled = true;
             break;
             
         case 90: // Z - تراجع (Ctrl+Z أو Cmd+Z)
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             document.execCommand('undo');
+            handled = true;
             break;
             
         case 89: // Y - إعادة (Ctrl+Y أو Cmd+Y)
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             document.execCommand('redo');
+            handled = true;
             break;
+    }
+    
+    if (handled) {
+        return false;
     }
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "vscode-html-wysiwyg",
   "displayName": "HTML WYSIWYG Editor",
-  "description": "محرر HTML مرئي بسيط وسريع مع تزامن ثنائي الاتجاه",
+  "description": "محرر HTML مرئي بسيط وسريع مع تزامن ثنائي الاتجاه ودعم CSS الخارجي",
   "publisher": "muataz",
   "version": "0.0.1",
   "repository": {
@@ -15,11 +15,49 @@
     "Other"
   ],
   "main": "./dist/extension.js",
+  "icon": "icon.png",
   "contributes": {
     "commands": [
       {
         "command": "wysiwyg.open",
         "title": "WYSIWYG: Open HTML Visual Editor"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "wysiwyg.open",
+          "when": "resourceLangId == html",
+          "group": "navigation",
+          "icon": "$(preview)"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "wysiwyg.open",
+        "key": "ctrl+shift+v",
+        "when": "resourceLangId == html"
+      },
+      {
+        "command": "-workbench.action.toggleSidebarVisibility",
+        "key": "ctrl+b",
+        "when": "activeWebviewPanelId == 'htmlWysiwyg'"
+      },
+      {
+        "command": "-workbench.action.terminal.toggleTerminal",
+        "key": "ctrl+`",
+        "when": "activeWebviewPanelId == 'htmlWysiwyg'"
+      },
+      {
+        "command": "-workbench.action.quickOpen",
+        "key": "ctrl+p",
+        "when": "activeWebviewPanelId == 'htmlWysiwyg'"
+      },
+      {
+        "command": "-editor.action.commentLine",
+        "key": "ctrl+/",
+        "when": "activeWebviewPanelId == 'htmlWysiwyg'"
       }
     ]
   },
@@ -31,7 +69,7 @@
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/vscode": "^1.90.0",
-    "esbuild": "^0.23.0",
+    "esbuild": "^0.25.11",
     "typescript": "^5.6.3"
   }
 }

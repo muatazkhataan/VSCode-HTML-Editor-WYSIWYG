@@ -56,6 +56,21 @@ body {
     font-size: 14px;
     transition: all 0.15s;
     min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+}
+
+.toolbar-btn i {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.toolbar-btn * {
+    pointer-events: none;
 }
 
 .toolbar-btn:hover {
