@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>إنشاء أيقونات شريط الأدوات</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>إنشاء أيقونات شريط الأدوات (16×16)</h2>
+
+    <div>
+        <h3>أيقونة فاتحة (Light)</h3>
+        <canvas id="canvasLight" width="16" height="16"></canvas>
+        <button onclick="downloadIcon('light')">تحميل أيقونة Light</button>
+    </div>
+
+    <div>
+        <h3>أيقونة داكنة (Dark)</h3>
+        <canvas id="canvasDark" width="16" height="16"></canvas>
+        <button onclick="downloadIcon('dark')">تحميل أيقونة Dark</button>
+    </div>
+
+    <script>
+        // رسم الأيقونة الفاتحة
+        const canvasLight = document.getElementById('canvasLight');
+        const ctxLight = canvasLight.getContext('2d');
+
+        ctxLight.strokeStyle = '#424242';
+        ctxLight.lineWidth = 1.5;
+
+        // إطار
+        ctxLight.strokeRect(2, 2, 12, 12);
+
+        // خطوط النص
+        ctxLight.lineWidth = 1;
+        ctxLight.beginPath();
+        ctxLight.moveTo(4, 6);
+        ctxLight.lineTo(12, 6);
+        ctxLight.moveTo(4, 8);
+        ctxLight.lineTo(10, 8);
+        ctxLight.moveTo(4, 10);
+        ctxLight.lineTo(12, 10);
+        ctxLight.stroke();
+
+        // نقطة المؤشر
+        ctxLight.fillStyle = '#424242';
+        ctxLight.beginPath();
+        ctxLight.arc(11, 8, 0.8, 0, Math.PI * 2);
+        ctxLight.fill();
+
+        // رسم الأيقونة الداكنة
+        const canvasDark = document.getElementById('canvasDark');
+        const ctxDark = canvasDark.getContext('2d');
+
+        ctxDark.strokeStyle = '#C5C5C5';
+        ctxDark.lineWidth = 1.5;
+
+        // إطار
+        ctxDark.strokeRect(2, 2, 12, 12);
+
+        // خطوط النص
+        ctxDark.lineWidth = 1;
+        ctxDark.beginPath();
+        ctxDark.moveTo(4, 6);
+        ctxDark.lineTo(12, 6);
+        ctxDark.moveTo(4, 8);
+        ctxDark.lineTo(10, 8);
+        ctxDark.moveTo(4, 10);
+        ctxDark.lineTo(12, 10);
+        ctxDark.stroke();
+
+        // نقطة المؤشر
+        ctxDark.fillStyle = '#C5C5C5';
+        ctxDark.beginPath();
+        ctxDark.arc(11, 8, 0.8, 0, Math.PI * 2);
+        ctxDark.fill();
+
+        function downloadIcon(type) {
+            const canvas = type === 'light' ? canvasLight : canvasDark;
+
+            canvas.toBlob(function (blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon-${type}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -531,11 +531,39 @@ async function copySelection() {
 
 async function pasteFromClipboard() {
     try {
-        const text = await navigator.clipboard.readText();
-        document.execCommand('insertText', false, text);
-        console.log('📌 Paste completed');
+        // محاولة قراءة HTML المنسق من الحافظة
+        const clipboardItems = await navigator.clipboard.read();
+        
+        for (const item of clipboardItems) {
+            // البحث عن HTML أولاً
+            if (item.types.includes('text/html')) {
+                const blob = await item.getType('text/html');
+                const html = await blob.text();
+                
+                // تنظيف HTML قبل اللصق
+                const cleanedHtml = cleanPastedHtml(html);
+                document.execCommand('insertHTML', false, cleanedHtml);
+                console.log('📌 Paste HTML completed (cleaned)');
+                return;
+            }
+            // إذا لم يكن هناك HTML، استخدم النص العادي
+            else if (item.types.includes('text/plain')) {
+                const blob = await item.getType('text/plain');
+                const text = await blob.text();
+                document.execCommand('insertText', false, text);
+                console.log('📌 Paste text completed');
+                return;
+            }
+        }
     } catch (err) {
-        console.error('Paste failed:', err);
+        // إذا فشل، استخدم الطريقة القديمة للنص العادي
+        console.error('Paste with clipboard API failed, using fallback:', err);
+        try {
+            const text = await navigator.clipboard.readText();
+            document.execCommand('insertText', false, text);
+        } catch (fallbackErr) {
+            console.error('Fallback paste also failed:', fallbackErr);
+        }
     }
 }
 
@@ -582,19 +610,218 @@ function reconstructFullHtml(originalHtml, newBodyContent) {
     return newBodyContent;
 }
 
+// دالة لتنظيف HTML الملصق من Word وبرامج أخرى
+function cleanPastedHtml(html) {
+    // إنشاء عنصر مؤقت لمعالجة HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    
+    // كشف إذا كان من Word
+    const isFromWord = html.includes('urn:schemas-microsoft-com:office') || 
+                       html.includes('MsoNormal') || 
+                       html.includes('<!--[if') ||
+                       /<(\w+):[^>]+>/i.test(html);
+    
+    if (isFromWord) {
+        console.log('📄 Detected Word content, cleaning...');
+        
+        // إزالة عناصر Word الخاصة
+        const wordElements = temp.querySelectorAll('o\\:p, w\\:sdt, w\\:sdtpr, m\\:omath, v\\:shape, style, meta, link');
+        wordElements.forEach(el => el.remove());
+        
+        // إزالة التعليقات
+        removeComments(temp);
+        
+        // إزالة XML namespaces من العناصر
+        cleanElement(temp);
+    }
+    
+    // تنظيف عام للـ HTML (حتى لو لم يكن من Word)
+    cleanElement(temp);
+    
+    // إزالة div الخارجي الغير ضروري إذا كان موجودًا
+    // إذا كان المحتوى كله داخل div واحد فقط، استخرج محتواه
+    if (temp.children.length === 1 && temp.children[0].tagName.toLowerCase() === 'div') {
+        const singleDiv = temp.children[0];
+        // تحقق إذا كان div بدون صفات مهمة أو له صفات قليلة
+        const hasMinimalAttributes = !singleDiv.hasAttribute('class') && 
+                                     !singleDiv.hasAttribute('id') &&
+                                     (!singleDiv.hasAttribute('style') || singleDiv.getAttribute('style').trim() === '');
+        
+        if (hasMinimalAttributes) {
+            return singleDiv.innerHTML;
+        }
+    }
+    
+    return temp.innerHTML;
+}
+
+// إزالة التعليقات من HTML
+function removeComments(element) {
+    const iterator = document.createNodeIterator(
+        element,
+        NodeFilter.SHOW_COMMENT,
+        null
+    );
+    
+    const comments = [];
+    let comment;
+    while (comment = iterator.nextNode()) {
+        comments.push(comment);
+    }
+    
+    comments.forEach(c => c.remove());
+}
+
+// تنظيف العنصر وأبنائه
+function cleanElement(element) {
+    const allowedTags = [
+        'p', 'div', 'span', 'br', 'hr',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del',
+        'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+        'a', 'img',
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'caption', 'colgroup', 'col',
+        'blockquote', 'pre', 'code',
+        'sup', 'sub', 'mark', 'small'
+    ];
+    
+    const allowedAttributes = [
+        'href', 'src', 'alt', 'title',
+        'style', 'dir', 'align',
+        // صفات الجداول
+        'colspan', 'rowspan', 'scope', 'headers',
+        // صفات القوائم
+        'type', 'start', 'reversed'
+    ];
+    
+    const allowedStyles = [
+        'color', 'background-color',
+        'font-weight', 'font-style', 'text-decoration',
+        'text-align', 'direction',
+        'margin-left', 'margin-right', 'padding-left', 'padding-right',
+        // styles للجداول
+        'border', 'border-collapse', 'border-spacing',
+        'border-top', 'border-bottom', 'border-left', 'border-right',
+        'border-color', 'border-width', 'border-style',
+        'width', 'height', 'min-width', 'max-width',
+        'vertical-align',
+        // styles للقوائم
+        'list-style-type', 'list-style-position', 'list-style'
+    ];
+    
+    // معالجة جميع العناصر
+    const elements = element.querySelectorAll('*');
+    
+    elements.forEach(el => {
+        const tagName = el.tagName.toLowerCase();
+        
+        // إزالة العناصر غير المسموح بها
+        if (!allowedTags.includes(tagName)) {
+            // نقل المحتوى إلى الأب بدلاً من حذفه
+            while (el.firstChild) {
+                el.parentNode.insertBefore(el.firstChild, el);
+            }
+            el.remove();
+            return;
+        }
+        
+        // تنظيف الصفات
+        const attributes = Array.from(el.attributes);
+        attributes.forEach(attr => {
+            const attrName = attr.name.toLowerCase();
+            
+            // إزالة صفات XML namespace (مثل w:, o:, v:)
+            if (attrName.includes(':')) {
+                el.removeAttribute(attr.name);
+                return;
+            }
+            
+            // إزالة الصفات غير المسموح بها
+            if (!allowedAttributes.includes(attrName)) {
+                // استثناء: احتفظ بـ class إذا كان مفيداً
+                if (attrName !== 'class' || el.className.includes('Mso')) {
+                    el.removeAttribute(attr.name);
+                }
+            }
+        });
+        
+        // تنظيف classes من Word
+        if (el.className) {
+            const classes = el.className.split(' ')
+                .filter(c => !c.startsWith('Mso') && !c.startsWith('ms-') && c.trim());
+            
+            if (classes.length === 0) {
+                el.removeAttribute('class');
+            } else {
+                el.className = classes.join(' ');
+            }
+        }
+        
+        // تنظيف styles
+        if (el.hasAttribute('style')) {
+            const currentStyle = el.getAttribute('style');
+            const cleanedStyles = [];
+            
+            // تحليل الـ styles
+            currentStyle.split(';').forEach(style => {
+                const [property, value] = style.split(':').map(s => s.trim());
+                if (property && value && allowedStyles.includes(property.toLowerCase())) {
+                    cleanedStyles.push(`${property}: ${value}`);
+                }
+            });
+            
+            if (cleanedStyles.length > 0) {
+                el.setAttribute('style', cleanedStyles.join('; '));
+            } else {
+                el.removeAttribute('style');
+            }
+        }
+        
+        // تحويل span فارغ إلى br أو حذفه
+        if (tagName === 'span' && !el.hasAttributes() && el.textContent.trim() === '') {
+            el.remove();
+        }
+        
+        // تنظيف فقرات فارغة من Word (لكن احتفظ بالجداول والقوائم)
+        const keepTags = ['table', 'ul', 'ol', 'dl', 'thead', 'tbody', 'tfoot', 'tr'];
+        if ((tagName === 'p' || tagName === 'div') && 
+            el.textContent.trim() === '' && 
+            !el.querySelector('img, br, table, ul, ol, dl') &&
+            !keepTags.includes(tagName)) {
+            el.remove();
+        }
+    });
+}
+
 function handlePaste(evt) {
     const items = evt.clipboardData.items;
     
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
         
+        // معالجة لصق الصور
         if (item.type.startsWith('image/')) {
             evt.preventDefault();
             
             const file = item.getAsFile();
             handleImageUpload(file);
+            return;
         }
     }
+    
+    // السماح بلصق HTML المنسق بشكل طبيعي
+    // إذا كان هناك HTML في الحافظة، سيتم لصقه مع التنسيق الأصلي
+    const htmlData = evt.clipboardData.getData('text/html');
+    if (htmlData) {
+        evt.preventDefault();
+        
+        // تنظيف HTML إذا كان من Word أو برامج أخرى
+        const cleanedHtml = cleanPastedHtml(htmlData);
+        document.execCommand('insertHTML', false, cleanedHtml);
+        console.log('📌 Pasted HTML content with formatting');
+    }
+    // إذا لم يكن هناك HTML، سيتم لصق النص العادي تلقائياً
 }
 
 function handleImageUpload(file) {
@@ -730,3 +957,4 @@ function syncCursorPosition() {
         // تجاهل الأخطاء
     }
 }
+

@@ -20,7 +20,11 @@
     "commands": [
       {
         "command": "wysiwyg.open",
-        "title": "WYSIWYG: Open HTML Visual Editor"
+        "title": "WYSIWYG: Open HTML Visual Editor",
+        "icon": {
+          "light": "resources/icon-light.svg",
+          "dark": "resources/icon-dark.svg"
+        }
       }
     ],
     "menus": {
@@ -28,8 +32,7 @@
         {
           "command": "wysiwyg.open",
           "when": "resourceLangId == html",
-          "group": "navigation",
-          "icon": "$(preview)"
+          "group": "navigation"
         }
       ]
     },
