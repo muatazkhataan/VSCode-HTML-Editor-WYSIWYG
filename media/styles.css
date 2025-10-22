@@ -153,6 +153,13 @@ body {
 .editor a {
     color: #0066cc;
     text-decoration: underline;
+    cursor: text;
+    pointer-events: auto;
+}
+
+.editor a:active,
+.editor a:focus {
+    outline: 1px dashed #0066cc;
 }
 
 .editor img {
@@ -232,4 +239,349 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #4e4e4e;
+}
+
+/* نافذة حوار الروابط */
+.link-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    direction: rtl;
+}
+
+.link-dialog-content {
+    background: #252526;
+    border: 1px solid #3e3e42;
+    border-radius: 6px;
+    padding: 20px;
+    min-width: 450px;
+    max-width: 600px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.link-dialog-content h5 {
+    color: #cccccc;
+    font-size: 16px;
+    margin: 0 0 20px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #3e3e42;
+}
+
+.link-dialog-content .form-content {
+    margin-bottom: 20px;
+}
+
+.link-dialog-content .mb-3 {
+    margin-bottom: 15px;
+}
+
+.link-dialog-content .form-label {
+    display: block;
+    color: #cccccc;
+    font-size: 13px;
+    margin-bottom: 6px;
+    font-weight: normal;
+}
+
+.link-dialog-content .form-control,
+.link-dialog-content .form-select {
+    width: 100%;
+    background: #3c3c3c;
+    border: 1px solid #515154;
+    color: #cccccc;
+    padding: 8px 10px;
+    border-radius: 3px;
+    font-size: 13px;
+    outline: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Arial', sans-serif;
+}
+
+.link-dialog-content .form-control:focus,
+.link-dialog-content .form-select:focus {
+    border-color: #007acc;
+    background: #2d2d30;
+}
+
+.link-dialog-content .dialog-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 15px;
+    border-top: 1px solid #3e3e42;
+}
+
+.link-dialog-content .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Arial', sans-serif;
+}
+
+.link-dialog-content .btn i {
+    font-size: 12px;
+}
+
+.link-dialog-content .btn-primary {
+    background: #0e639c;
+    color: #ffffff;
+}
+
+.link-dialog-content .btn-primary:hover {
+    background: #1177bb;
+}
+
+.link-dialog-content .btn-secondary {
+    background: #3e3e42;
+    color: #cccccc;
+}
+
+.link-dialog-content .btn-secondary:hover {
+    background: #505053;
+}
+
+.link-dialog-content .btn-danger {
+    background: #c72e2e;
+    color: #ffffff;
+    margin-left: auto;
+}
+
+.link-dialog-content .btn-danger:hover {
+    background: #e03e3e;
+}
+
+/* تنسيقات وضع التمييز (Highlight Mode) */
+/* تنسيقات الجداول */
+.custom-editor table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0;
+}
+
+.custom-editor table:not([border]):not([style*="border"]),
+.custom-editor table:not([border]):not([style*="border"]) td,
+.custom-editor table:not([border]):not([style*="border"]) th {
+    border: 1px dashed #ccc !important;
+}
+
+.custom-editor td,
+.custom-editor th {
+    min-width: 30px;
+    min-height: 20px;
+    padding: 5px;
+    position: relative;
+}
+
+.custom-editor td:hover,
+.custom-editor th:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.custom-editor table:hover {
+    outline: 2px solid #007acc;
+}
+
+/* تنسيقات الروابط */
+.custom-editor a {
+    position: relative;
+    margin-right: 35px;
+    background-color: rgba(255, 193, 7, 0.25);
+    color: #856404;
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: 5px 0 0 5px;
+    padding: 0 5px;
+}
+
+.custom-editor a:hover {
+    background-color: rgba(255, 193, 7, 0.5);
+    color: #212529;
+    transition: all 0.5s ease;
+}
+
+.custom-editor a::before {
+    content: "🔗";
+    position: absolute;
+    display: block;
+    right: -25px;
+    top: 0;
+    height: 100%;
+    width: 25px;
+    border-radius: 5px 0 0 5px;
+    background-color: rgba(255, 193, 7, 0.5);
+    color: rgba(255, 193, 7, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-family: monospace;
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    transition: all 0.2s ease;
+}
+
+.custom-editor a:active,
+.custom-editor a:visited {
+    color: #007acc;
+    text-decoration: underline;
+}
+
+/* تنسيقات العناوين */
+.custom-editor h1 {
+    background-color: rgba(109, 207, 246, 0.1);
+}
+
+.custom-editor h2 {
+    background-color: rgba(122, 204, 200, 0.1);
+}
+
+.custom-editor h3 {
+    background-color: rgba(130, 202, 156, 0.1);
+}
+
+.custom-editor h4 {
+    background-color: rgba(163, 211, 156, 0.1);
+}
+
+.custom-editor h5 {
+    background-color: rgba(202, 223, 155, 0.1);
+}
+
+.custom-editor h6 {
+    background-color: rgba(255, 247, 153, 0.1);
+}
+
+/* التنسيقات المشتركة للعناوين */
+.custom-editor h1,
+.custom-editor h2,
+.custom-editor h3,
+.custom-editor h4,
+.custom-editor h5,
+.custom-editor h6 {
+    position: relative;
+    border-radius: 5px;
+    padding: 8px 35px 8px 10px;
+    transition: all 0.2s ease;
+}
+
+/* تنسيقات تاج العناوين */
+.custom-editor h1::after { content: "H1"; }
+.custom-editor h2::after { content: "H2"; }
+.custom-editor h3::after { content: "H3"; }
+.custom-editor h4::after { content: "H4"; }
+.custom-editor h5::after { content: "H5"; }
+.custom-editor h6::after { content: "H6"; }
+
+.custom-editor h1::after,
+.custom-editor h2::after,
+.custom-editor h3::after,
+.custom-editor h4::after,
+.custom-editor h5::after,
+.custom-editor h6::after {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 25px;
+    border-radius: 5px 0 0 5px;
+    color: rgba(0, 122, 204, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-family: monospace;
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    transition: all 0.2s ease;
+}
+
+/* تنسيقات تاج العناوين */
+.custom-editor h1::after {
+    background-color: rgba(109, 207, 246, 0.3);
+    color: rgb(109, 207, 246);
+}
+
+.custom-editor h2::after {
+    background-color: rgba(122, 204, 200, 0.3);
+    color: rgb(122, 204, 200);
+}
+
+.custom-editor h3::after {
+    background-color: rgba(130, 202, 156, 0.3);
+    color: rgb(130, 202, 156);
+}
+
+.custom-editor h4::after {
+    background-color: rgba(163, 211, 156, 0.3);
+    color: rgb(163, 211, 156);
+}
+
+.custom-editor h5::after {
+    background-color: rgba(202, 223, 155, 0.3);
+    color: rgb(202, 223, 155);
+}
+
+.custom-editor h6::after {
+    background-color: rgba(255, 247, 153, 0.3);
+    color: rgb(255, 247, 153);
+}
+
+/* تأثيرات التحويم على العناوين */
+.custom-editor h1:hover::after,
+.custom-editor h2:hover::after,
+.custom-editor h3:hover::after,
+.custom-editor h4:hover::after,
+.custom-editor h5:hover::after,
+.custom-editor h6:hover::after {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    width: 30px;
+}
+
+/* تنسيقات الفقرات والقوائم */
+.custom-editor p,
+.custom-editor li {
+    padding: 5px;
+    background-color: rgba(255, 193, 7, 0.03) !important;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+}
+
+/* تأثيرات التحويم على العناصر */
+.custom-editor h1:hover,
+.custom-editor h2:hover,
+.custom-editor h3:hover,
+.custom-editor h4:hover,
+.custom-editor h5:hover,
+.custom-editor h6:hover,
+.custom-editor p:hover,
+.custom-editor li:hover {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+    box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.1);
+    border-radius: 5px;
+}
+
+/* تنسيقات العناصر div */
+.custom-editor div {
+    padding: 0 5px;
+    background-color: rgba(220, 53, 69, 0.05) !important;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+}
+
+.custom-editor div:hover {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.1);
 }

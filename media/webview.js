@@ -31,6 +31,73 @@ function initializeEditor() {
     // معالجة لصق الصور
     editor.addEventListener('paste', handlePaste);
     
+    // منع فتح الروابط في المحرر - معالج شامل
+    const preventLinkNavigation = (e) => {
+        // البحث عن عنصر الرابط في السلسلة
+        let target = e.target;
+        while (target && target !== editor) {
+            if (target.tagName === 'A') {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                console.log('🔗 Prevented link navigation on', e.type);
+                return false;
+            }
+            target = target.parentElement;
+        }
+    };
+    
+    // منع فتح الروابط على حدث النقر فقط (نسمح بـ mousedown/mouseup لوضع المؤشر)
+    editor.addEventListener('click', preventLinkNavigation, true);
+
+    // فتح محرر الرابط عند النقر المزدوج على رابط
+    editor.addEventListener('dblclick', (e) => {
+        let target = e.target;
+        while (target && target !== editor) {
+            if (target.tagName === 'A') {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                // ضع المؤشر داخل الرابط حتى يظهر كعنصر محدد للتحرير
+                try {
+                    const range = document.createRange();
+                    if (target.firstChild) {
+                        range.setStart(target.firstChild, 0);
+                    } else {
+                        range.selectNode(target);
+                    }
+                    range.collapse(true);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                } catch {}
+
+                // افتح نافذة محرر الرابط فوراً
+                execCreateLinkCommand();
+                return false;
+            }
+            target = target.parentElement;
+        }
+    }, true);
+    
+    // معالج إضافي على مستوى document كنسخة احتياطية
+    document.addEventListener('click', (e) => {
+        if (editor && editor.contains(e.target)) {
+            let target = e.target;
+            while (target && target !== document.body) {
+                if (target.tagName === 'A' && editor.contains(target)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    console.log('🔗 [Document] Prevented link navigation');
+                    return false;
+                }
+                target = target.parentElement;
+            }
+        }
+    }, true);
+    
     // تحديث حالة الأزرار عند تحريك المؤشر
     editor.addEventListener('keyup', () => {
         updateToolbarState();
@@ -51,6 +118,269 @@ function initializeEditor() {
     
     // إضافة أزرار شريط الأدوات
     setupToolbar();
+}
+
+// فئة لحفظ واستعادة موضع المؤشر
+class CaretPosition {
+    static savedRange = null;
+    
+    static save() {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            this.savedRange = selection.getRangeAt(0).cloneRange();
+        }
+    }
+    
+    static restore() {
+        if (this.savedRange) {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(this.savedRange);
+        }
+    }
+}
+
+// دالة لتعطيل جميع الروابط في المحرر
+function disableAllLinks() {
+    if (!editor) return;
+    
+    const links = editor.querySelectorAll('a');
+    links.forEach(link => {
+        // لا نزيل href، فقط نمنع الأحداث
+        link.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            return false;
+        };
+        
+        link.style.cursor = 'text';
+    });
+}
+
+// دالة لاستعادة الروابط عند الحفظ (لم تعد ضرورية لكن نبقيها للتوافق)
+function restoreAllLinks() {
+    // لا نحتاج لفعل شيء الآن
+    return;
+}
+
+// دالة لتفعيل/إلغاء وضع التمييز
+function toggleHighlightMode() {
+    if (!editor) return;
+    
+    if (editor.classList.contains('custom-editor')) {
+        // إلغاء وضع التمييز
+        editor.classList.remove('custom-editor');
+        console.log('✨ Highlight mode disabled');
+    } else {
+        // تفعيل وضع التمييز
+        editor.classList.add('custom-editor');
+        console.log('✨ Highlight mode enabled');
+    }
+    
+    // تحديث حالة الأزرار
+    updateToolbarState();
+}
+
+// دالة لإنشاء/تحرير الرابط
+function execCreateLinkCommand() {
+    // الحصول على التحديد الحالي
+    const selection = window.getSelection();
+    if (selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    let linkElement = range.commonAncestorContainer;
+    
+    // إذا كان العنصر نصاً، نحصل على العنصر الأب
+    if (linkElement.nodeType === 3) {
+        linkElement = linkElement.parentElement;
+    }
+
+    // البحث عن أقرب رابط
+    const existingLink = linkElement.closest('a');
+    const selectedText = selection.toString().trim();
+    
+    // تحديد النص والرابط الافتراضي
+    let defaultText = selectedText;
+    let defaultUrl = 'http://';
+    
+    // إذا كان هناك رابط موجود
+    if (existingLink) {
+        defaultUrl = existingLink.href;
+        defaultText = existingLink.textContent;
+    }
+    
+    // إنشاء نافذة حوار لتحرير الرابط
+    const linkDialog = document.createElement('div');
+    linkDialog.className = 'link-dialog';
+    linkDialog.innerHTML = `
+        <div class="link-dialog-content">
+            <h5>${existingLink ? 'تحرير الرابط' : 'إضافة رابط جديد'}</h5>
+            <div class="form-content">
+                <div class="mb-3">
+                    <label for="link-url" class="form-label">عنوان الرابط:</label>
+                    <input type="text" class="form-control" id="link-url" value="${defaultUrl}">
+                </div>
+                <div class="mb-3">
+                    <label for="link-text" class="form-label">نص الرابط:</label>
+                    <input type="text" class="form-control" id="link-text" value="${defaultText}">
+                </div>
+                <div class="mb-3">
+                    <label for="link-title" class="form-label">عنوان الرابط (title):</label>
+                    <input type="text" class="form-control" id="link-title" value="${existingLink ? existingLink.title || '' : ''}">
+                </div>
+                <div class="mb-3">
+                    <label for="link-target" class="form-label">فتح الرابط في:</label>
+                    <select class="form-select" id="link-target">
+                        <option value="_self" ${existingLink && existingLink.target !== '_blank' ? 'selected' : ''}>نفس النافذة</option>
+                        <option value="_blank" ${existingLink && existingLink.target === '_blank' ? 'selected' : ''}>نافذة جديدة</option>
+                    </select>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                ${existingLink ? '<button class="btn btn-danger" id="link-remove"><i class="fas fa-trash-can"></i> إزالة</button>' : ''}
+                <button class="btn btn-secondary" id="link-cancel"><i class="fas fa-xmark"></i> إلغاء</button>
+                <button class="btn btn-primary" id="link-save"><i class="fas fa-check"></i> حفظ</button>
+            </div>
+        </div>
+    `;
+    
+    // إضافة نافذة الحوار للمستند
+    document.body.appendChild(linkDialog);
+    
+    // التركيز على حقل عنوان الرابط
+    setTimeout(() => {
+        document.getElementById('link-url').focus();
+        document.getElementById('link-url').select();
+    }, 100);
+    
+    // معالجة حدث الحفظ
+    document.getElementById('link-save').addEventListener('click', () => {
+        const url = document.getElementById('link-url').value;
+        const text = document.getElementById('link-text').value;
+        const title = document.getElementById('link-title').value;
+        const target = document.getElementById('link-target').value;
+        
+        if (url) {
+            // حفظ موقع المؤشر
+            CaretPosition.save();
+            
+            if (existingLink) {
+                // تحديث الرابط الموجود
+                existingLink.href = url;
+                existingLink.textContent = text;
+                existingLink.title = title;
+                existingLink.target = target;
+            } else {
+                // إنشاء رابط جديد
+                if (selectedText) {
+                    // إذا كان هناك نص محدد، نستخدم الأمر العادي
+                    document.execCommand('createLink', false, url);
+                    
+                    // الحصول على الرابط الذي تم إنشاؤه
+                    const newLink = selection.anchorNode.parentElement.closest('a');
+                    if (newLink) {
+                        // تحديث نص الرابط إذا كان مختلفاً عن النص المحدد
+                        if (text !== selectedText) {
+                            newLink.textContent = text;
+                        }
+                        
+                        // إضافة العنوان والهدف
+                        newLink.title = title;
+                        newLink.target = target;
+                    }
+                } else {
+                    // إذا لم يكن هناك نص محدد، ننشئ رابطاً جديداً يدوياً
+                    const newLink = document.createElement('a');
+                    newLink.href = url;
+                    newLink.textContent = text || 'رابط جديد';
+                    newLink.title = title;
+                    newLink.target = target;
+                    
+                    // إدراج الرابط في الموضع الحالي
+                    range.deleteContents();
+                    range.insertNode(newLink);
+                    
+                    // تحديد الرابط الجديد
+                    const newRange = document.createRange();
+                    newRange.selectNodeContents(newLink);
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                }
+            }
+            
+            // استعادة موقع المؤشر
+            CaretPosition.restore();
+            
+            // إشعار بالتغيير
+            handleEditorChange();
+            
+            // تعطيل الروابط بعد الإنشاء/التحرير
+            setTimeout(() => {
+                disableAllLinks();
+            }, 100);
+        }
+        
+        // إزالة نافذة الحوار
+        document.body.removeChild(linkDialog);
+    });
+    
+    // معالجة حدث الإلغاء
+    document.getElementById('link-cancel').addEventListener('click', () => {
+        document.body.removeChild(linkDialog);
+    });
+    
+    // معالجة حدث إزالة الرابط (إذا كان موجوداً)
+    if (existingLink) {
+        document.getElementById('link-remove').addEventListener('click', () => {
+            // تحديد الرابط
+            const removeRange = document.createRange();
+            removeRange.selectNode(existingLink);
+            selection.removeAllRanges();
+            selection.addRange(removeRange);
+            
+            // إزالة الرابط مع الحفاظ على النص
+            document.execCommand('unlink');
+            
+            // إشعار بالتغيير
+            handleEditorChange();
+            
+            // تعطيل الروابط بعد الإزالة
+            setTimeout(() => {
+                disableAllLinks();
+            }, 100);
+            
+            // إزالة نافذة الحوار
+            document.body.removeChild(linkDialog);
+        });
+    }
+    
+    // إضافة معالج لمفتاح Escape لإغلاق النافذة
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            if (document.body.contains(linkDialog)) {
+                document.body.removeChild(linkDialog);
+            }
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    
+    document.addEventListener('keydown', handleEscape);
+    
+    // إضافة معالج لمفتاح Enter لحفظ الرابط
+    const handleEnter = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            document.getElementById('link-save').click();
+            document.removeEventListener('keydown', handleEnter);
+        }
+    };
+    
+    // إضافة معالج Enter على حقول الإدخال فقط
+    const inputs = linkDialog.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        input.addEventListener('keydown', handleEnter);
+    });
 }
 
 function setupToolbar() {
@@ -89,6 +419,8 @@ function setupToolbar() {
     toolbar.appendChild(sep1);
     
     const buttons = [
+        { icon: '<i class="fas fa-highlighter"></i>', command: 'toggleHighlight', title: 'تمييز العناصر' },
+        { type: 'separator' },
         { icon: '<i class="fas fa-cut"></i>', command: 'cut', title: 'قص' },
         { icon: '<i class="fas fa-copy"></i>', command: 'copy', title: 'نسخ' },
         { icon: '<i class="fas fa-paste"></i>', command: 'paste', title: 'لصق' },
@@ -227,6 +559,21 @@ function updateToolbarState() {
                 case 'dirLTR':
                     isActive = checkDirection('ltr');
                     break;
+                case 'createLink':
+                    // التحقق إذا كان المؤشر على رابط
+                    const sel = window.getSelection();
+                    if (sel.rangeCount > 0) {
+                        let node = sel.getRangeAt(0).commonAncestorContainer;
+                        if (node.nodeType === 3) {
+                            node = node.parentElement;
+                        }
+                        isActive = node.closest('a') !== null;
+                    }
+                    break;
+                case 'toggleHighlight':
+                    // التحقق إذا كان وضع التمييز مفعلاً
+                    isActive = editor && editor.classList.contains('custom-editor');
+                    break;
             }
         } catch (e) {
             // تجاهل الأخطاء
@@ -362,6 +709,9 @@ function applyDirection(dir) {
 
 async function handleToolbarCommand(command) {
     switch (command) {
+        case 'toggleHighlight':
+            toggleHighlightMode();
+            break;
         case 'cut':
             await cutSelection();
             break;
@@ -372,8 +722,7 @@ async function handleToolbarCommand(command) {
             await pasteFromClipboard();
             break;
         case 'createLink':
-            const url = prompt('أدخل الرابط:', 'https://');
-            if (url) document.execCommand('createLink', false, url);
+            execCreateLinkCommand();
             break;
         case 'insertImage':
             const input = document.createElement('input');
@@ -587,6 +936,11 @@ function handleEditorChange() {
                 html: fullHtml
             });
         }
+        
+        // تعطيل الروابط مرة أخرى بعد الحفظ
+        setTimeout(() => {
+            disableAllLinks();
+        }, 50);
     }, 300);
 }
 
@@ -872,6 +1226,11 @@ function handleInit(html) {
         const bodyContent = extractBodyContent(html);
         editor.innerHTML = bodyContent;
         
+        // تعطيل جميع الروابط
+        setTimeout(() => {
+            disableAllLinks();
+        }, 50);
+        
         console.log('✅ Editor content set successfully');
         setTimeout(() => {
             isUpdatingFromExternal = false;
@@ -905,6 +1264,11 @@ function handleExternalChange(html) {
     isUpdatingFromExternal = true;
     currentHtml = html;
     editor.innerHTML = bodyContent;
+    
+    // تعطيل جميع الروابط
+    setTimeout(() => {
+        disableAllLinks();
+    }, 50);
     
     setTimeout(() => {
         isUpdatingFromExternal = false;
