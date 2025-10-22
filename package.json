@@ -2,7 +2,7 @@
   "name": "vscode-html-wysiwyg",
   "displayName": "HTML WYSIWYG Editor",
   "description": "محرر HTML مرئي بسيط وسريع مع تزامن ثنائي الاتجاه ودعم CSS الخارجي",
-  "publisher": "muataz",
+  "publisher": "Courras",
   "version": "0.0.1",
   "repository": {
     "type": "git",
@@ -72,6 +72,7 @@
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.6.2",
     "esbuild": "^0.25.11",
     "typescript": "^5.6.3"
   }
