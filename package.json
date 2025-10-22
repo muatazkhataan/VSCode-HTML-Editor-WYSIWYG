@@ -6,7 +6,7 @@
   "version": "0.0.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/muataz/vscode-html-wysiwyg"
+    "url": "https://github.com/muatazkhataan/VSCode-HTML-Editor-WYSIWYG"
   },
   "engines": {
     "vscode": "^1.90.0"
